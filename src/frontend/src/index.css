@@ -1,0 +1,166 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --radius: 0.75rem;
+    --background: 1 0 0;
+    --foreground: 0.15 0.02 255;
+    --card: 0.99 0.005 240;
+    --card-foreground: 0.15 0.02 255;
+    --popover: 0.99 0.005 240;
+    --popover-foreground: 0.15 0.02 255;
+    --primary: 0.58 0.18 255;
+    --primary-foreground: 0.98 0 0;
+    --secondary: 0.97 0.01 240;
+    --secondary-foreground: 0.35 0.03 255;
+    --muted: 0.96 0.01 240;
+    --muted-foreground: 0.55 0.03 255;
+    --accent: 0.95 0.02 240;
+    --accent-foreground: 0.15 0.02 255;
+    --destructive: 0.577 0.245 27.325;
+    --destructive-foreground: 0.985 0 0;
+    --border: 0.9 0.01 240;
+    --input: 0.97 0.01 240;
+    --ring: 0.58 0.18 255;
+    --success: 0.72 0.2 145;
+    --warning: 0.8 0.19 80;
+    --zpay-blue: 0.58 0.18 255;
+    --zpay-green: 0.55 0.2 145;
+    --zpay-red: 0.55 0.22 25;
+    --chart-1: 0.58 0.18 255;
+    --chart-2: 0.72 0.2 145;
+    --chart-3: 0.62 0.22 25;
+    --chart-4: 0.828 0.189 84.429;
+    --chart-5: 0.769 0.188 70.08;
+    --sidebar: 0.99 0.005 240;
+    --sidebar-foreground: 0.15 0.02 255;
+    --sidebar-primary: 0.58 0.18 255;
+    --sidebar-primary-foreground: 0.985 0 0;
+    --sidebar-accent: 0.97 0.01 240;
+    --sidebar-accent-foreground: 0.15 0.02 255;
+    --sidebar-border: 0.9 0.01 240;
+    --sidebar-ring: 0.58 0.18 255;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Plus Jakarta Sans", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background-color: #ffffff;
+  }
+}
+
+/* Glass morphism utility */
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+}
+
+/* Custom toggle switch */
+.sell-toggle {
+  position: relative;
+  width: 52px;
+  height: 28px;
+  cursor: pointer;
+}
+
+.sell-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.sell-toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: oklch(0.88 0.02 240);
+  border-radius: 14px;
+  transition: background 0.3s;
+  border: 1px solid oklch(0.82 0.02 240);
+}
+
+.sell-toggle-slider::before {
+  content: "";
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  left: 3px;
+  top: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.3s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.sell-toggle input:checked + .sell-toggle-slider {
+  background: oklch(0.72 0.2 145);
+  border-color: oklch(0.65 0.22 145);
+}
+
+.sell-toggle input:checked + .sell-toggle-slider::before {
+  transform: translateX(24px);
+}
+
+/* Chat bubbles */
+.chat-bubble-bot {
+  background: rgba(248, 250, 252, 0.9);
+  color: oklch(0.15 0.02 255);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 18px 18px 18px 4px;
+  padding: 10px 14px;
+  max-width: 78%;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.chat-bubble-user {
+  background: oklch(0.58 0.18 255);
+  color: white;
+  border-radius: 18px 18px 4px 18px;
+  padding: 10px 14px;
+  max-width: 78%;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  margin-left: auto;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: oklch(0.82 0.02 240);
+  border-radius: 2px;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

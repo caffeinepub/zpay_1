@@ -7,6 +7,7 @@ export interface UserProfile {
   phone: string;
   password: string;
   referral: string;
+  isAdmin?: boolean;
 }
 
 interface LoginScreenProps {
@@ -42,6 +43,20 @@ export default function LoginScreen({ onAuth }: LoginScreenProps) {
   const handleLogin = () => {
     if (!loginPhone.trim() || !loginPassword.trim()) {
       setLoginError("Please enter your phone number and password.");
+      return;
+    }
+    // Admin shortcut
+    if (loginPhone.trim() === "admin" && loginPassword.trim() === "admin") {
+      setLoginError("");
+      localStorage.setItem("zpay_auth", "admin");
+      const adminProfile: UserProfile = {
+        name: "Admin",
+        phone: "admin",
+        password: "admin",
+        referral: "",
+        isAdmin: true,
+      };
+      onAuth(adminProfile, false);
       return;
     }
     const key = `zpay_user_${loginPhone.trim()}`;

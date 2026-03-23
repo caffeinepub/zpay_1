@@ -67,7 +67,7 @@ interface ProcessingOrder {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const CASHBACK_PCT = 9;
+const CASHBACK_PCT = 9.8;
 const BONUS_AMOUNT = 180;
 
 function genOrderId(): string {
@@ -822,8 +822,7 @@ function ClaimPage({
     null,
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const UPI_ID =
-    localStorage.getItem("zpay_admin_upi") || "pubgopop@freecharge";
+  const UPI_ID = localStorage.getItem("zpay_admin_upi") || "pawar.120@superyes";
 
   const handleCopyUpi = () => {
     navigator.clipboard.writeText(UPI_ID).catch(() => {});
@@ -968,12 +967,12 @@ function ClaimPage({
             Scan QR Code to Pay
           </p>
           <img
-            src="/assets/uploads/6197137114185535164-1.jpg"
+            src="/assets/uploads/6192863454222290747-019d1b9c-152a-738e-bccc-1988b0c35173-1.jpg"
             alt="UPI QR Code"
             className="w-48 h-48 mx-auto rounded-xl object-contain"
           />
           <p className="text-xs text-muted-foreground mt-2">
-            pubgopop@freecharge
+            pawar.120@superyes
           </p>
         </div>
 
@@ -2558,10 +2557,10 @@ function AdminTab({ onLogout }: { onLogout: () => void }) {
 
   // App settings
   const [upiSetting, setUpiSetting] = useState(
-    () => localStorage.getItem("zpay_admin_upi") || "pubgopop@freecharge",
+    () => localStorage.getItem("zpay_admin_upi") || "pawar.120@superyes",
   );
   const [cashbackSetting, setCashbackSetting] = useState(
-    () => localStorage.getItem("zpay_admin_cashback") || "9",
+    () => localStorage.getItem("zpay_admin_cashback") || "9.8",
   );
   const [bonusSetting, setBonusSetting] = useState(
     () => localStorage.getItem("zpay_admin_bonus") || "180",

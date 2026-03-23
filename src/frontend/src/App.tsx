@@ -29,7 +29,7 @@ import {
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import LoginScreen, { type UserProfile } from "./components/LoginScreen";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -812,8 +812,6 @@ function ClaimPage({
   onComplete: (po: ProcessingOrder) => void;
   onClose: () => void;
 }) {
-  const TOTAL_SECS = 5 * 60;
-  const [secsLeft, setSecsLeft] = useState(TOTAL_SECS);
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -826,15 +824,6 @@ function ClaimPage({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const UPI_ID =
     localStorage.getItem("zpay_admin_upi") || "pubgopop@freecharge";
-
-  useEffect(() => {
-    if (secsLeft <= 0) return;
-    const t = setInterval(() => setSecsLeft((s) => Math.max(0, s - 1)), 1000);
-    return () => clearInterval(t);
-  }, [secsLeft]);
-
-  const mins = String(Math.floor(secsLeft / 60)).padStart(2, "0");
-  const secs = String(secsLeft % 60).padStart(2, "0");
 
   const handleCopyUpi = () => {
     navigator.clipboard.writeText(UPI_ID).catch(() => {});
@@ -913,26 +902,6 @@ function ClaimPage({
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
-        {/* Timer */}
-        <div
-          className="rounded-2xl p-5 text-center"
-          style={{
-            background:
-              "linear-gradient(135deg, oklch(0.42 0.20 145), oklch(0.35 0.18 155))",
-            boxShadow: "0 4px 20px oklch(0.42 0.20 145 / 0.3)",
-          }}
-        >
-          <p className="text-xs text-white/80 mb-1 uppercase tracking-widest">
-            Time Remaining
-          </p>
-          <p className="text-5xl font-bold text-white font-mono tracking-widest">
-            {mins}:{secs}
-          </p>
-          <p className="text-xs text-white/70 mt-2">
-            Please complete payment before timer expires
-          </p>
-        </div>
-
         {/* Order ID */}
         <div
           className="rounded-xl p-4 border"
@@ -982,6 +951,30 @@ function ClaimPage({
               )}
             </button>
           </div>
+        </div>
+
+        {/* QR Code */}
+        <div
+          className="rounded-xl p-4 text-center"
+          style={{
+            background: "rgba(255,255,255,0.7)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            border: "1px solid rgba(0,0,0,0.08)",
+            boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
+          }}
+        >
+          <p className="text-xs text-muted-foreground mb-3">
+            Scan QR Code to Pay
+          </p>
+          <img
+            src="/assets/uploads/6197137114185535164-1.jpg"
+            alt="UPI QR Code"
+            className="w-48 h-48 mx-auto rounded-xl object-contain"
+          />
+          <p className="text-xs text-muted-foreground mt-2">
+            pubgopop@freecharge
+          </p>
         </div>
 
         {/* Amount */}
@@ -1131,7 +1124,7 @@ function ClaimPage({
           <button
             type="button"
             onClick={handleCompleteClick}
-            disabled={completed || secsLeft === 0}
+            disabled={completed}
             className="w-full py-4 rounded-xl font-bold text-base transition-all active:scale-[0.98] disabled:opacity-50"
             style={{
               background: completed
@@ -2976,6 +2969,13 @@ function AdminTab({ onLogout }: { onLogout: () => void }) {
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 export default function App() {
+  const MAINTENANCE_UNTIL = new Date("2020-01-01T00:00:00Z").getTime();
+  const [maintenanceNow, setMaintenanceNow] = React.useState(Date.now());
+  React.useEffect(() => {
+    const mt = setInterval(() => setMaintenanceNow(Date.now()), 1000);
+    return () => clearInterval(mt);
+  }, []);
+
   const [splash, setSplash] = useState(true);
   const [showBonus, setShowBonus] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState<string | null>(() =>
@@ -3176,6 +3176,85 @@ export default function App() {
 
   if (!isAuthenticated) {
     return <LoginScreen onAuth={handleAuth} />;
+  }
+
+  const maintenanceRemaining = Math.max(0, MAINTENANCE_UNTIL - maintenanceNow);
+  const maintenanceActive = maintenanceRemaining > 0;
+  const mh = Math.floor(maintenanceRemaining / 3600000);
+  const mm = Math.floor((maintenanceRemaining % 3600000) / 60000);
+  const ms = Math.floor((maintenanceRemaining % 60000) / 1000);
+
+  if (maintenanceActive) {
+    return (
+      <div
+        className="relative flex flex-col min-h-screen bg-white items-center justify-center"
+        style={{ maxWidth: 430, margin: "0 auto" }}
+      >
+        <div
+          style={{
+            background: "rgba(255,255,255,0.7)",
+            backdropFilter: "blur(16px)",
+            borderRadius: 24,
+            border: "1px solid rgba(212,175,55,0.3)",
+            boxShadow: "0 8px 32px rgba(212,175,55,0.15)",
+            padding: "2.5rem 2rem",
+            textAlign: "center",
+            maxWidth: 340,
+            width: "90%",
+          }}
+        >
+          <img
+            src="/assets/uploads/image_f9b2be02-1.png"
+            alt="ZPay"
+            style={{ height: 72, margin: "0 auto 1.5rem" }}
+          />
+          <div
+            style={{
+              fontSize: 22,
+              fontWeight: 700,
+              color: "#b8860b",
+              marginBottom: 8,
+            }}
+          >
+            Under Maintenance
+          </div>
+          <div style={{ fontSize: 14, color: "#666", marginBottom: 24 }}>
+            The app is currently under maintenance. We{"'"}ll be back shortly.
+          </div>
+          <div
+            style={{
+              background: "rgba(212,175,55,0.1)",
+              borderRadius: 16,
+              padding: "1rem 1.5rem",
+              display: "inline-block",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 12,
+                color: "#b8860b",
+                marginBottom: 4,
+                textTransform: "uppercase",
+                letterSpacing: 1,
+              }}
+            >
+              Resuming in
+            </div>
+            <div
+              style={{
+                fontSize: 36,
+                fontWeight: 800,
+                color: "#b8860b",
+                letterSpacing: 2,
+              }}
+            >
+              {String(mh).padStart(2, "0")}:{String(mm).padStart(2, "0")}:
+              {String(ms).padStart(2, "0")}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const userId = userProfile?.phone

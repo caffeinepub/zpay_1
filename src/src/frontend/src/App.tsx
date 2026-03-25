@@ -67,8 +67,8 @@ interface ProcessingOrder {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const CASHBACK_PCT = 8;
-const BONUS_AMOUNT = 600;
+const CASHBACK_PCT = 9.8;
+const BONUS_AMOUNT = 180;
 
 function genOrderId(): string {
   const chars =
@@ -178,7 +178,7 @@ function SplashScreen() {
         />
         <p
           className="text-2xl font-bold tracking-widest"
-          style={{ color: "oklch(0.75 0.18 40)" }}
+          style={{ color: "oklch(0.75 0.18 80)" }}
         >
           ZPay
         </p>
@@ -224,7 +224,7 @@ function BonusPopup({ onClose }: { onClose: () => void }) {
         <h3 className="text-xl font-bold text-foreground mb-2">Bonus Added!</h3>
         <div
           className="text-4xl font-bold mb-2"
-          style={{ color: "oklch(0.65 0.18 40)" }}
+          style={{ color: "oklch(0.62 0.18 80)" }}
         >
           +₹{Number(localStorage.getItem("zpay_admin_bonus") || BONUS_AMOUNT)}
         </div>
@@ -237,8 +237,8 @@ function BonusPopup({ onClose }: { onClose: () => void }) {
           className="w-full py-3 rounded-xl font-bold text-sm"
           style={{
             background:
-              "linear-gradient(135deg, oklch(0.72 0.18 42), oklch(0.62 0.20 34))",
-            color: "oklch(0.12 0.02 40)",
+              "linear-gradient(135deg, oklch(0.78 0.18 82), oklch(0.68 0.20 68))",
+            color: "oklch(0.12 0.02 80)",
           }}
         >
           Claim Bonus
@@ -1350,8 +1350,8 @@ function HomeTab({
           className="mx-4 mt-4 rounded-2xl p-4 relative overflow-hidden"
           style={{
             background:
-              "linear-gradient(135deg, oklch(0.68 0.18 50), oklch(0.58 0.20 38))",
-            boxShadow: "0 4px 20px oklch(0.68 0.18 50 / 0.35)",
+              "linear-gradient(135deg, oklch(0.50 0.20 155), oklch(0.38 0.18 165))",
+            boxShadow: "0 4px 20px oklch(0.50 0.20 155 / 0.3)",
           }}
         >
           <div className="absolute top-3 right-3 opacity-20">
@@ -1394,16 +1394,16 @@ function HomeTab({
         <div
           className="mx-4 mt-2 flex items-center gap-2 px-3 py-2.5 rounded-xl"
           style={{
-            background: "rgba(251,146,60,0.08)",
-            border: "1px solid rgba(251,146,60,0.25)",
+            background: "rgba(234,179,8,0.06)",
+            border: "1px solid rgba(234,179,8,0.2)",
           }}
         >
           <AlertTriangle
             size={14}
-            style={{ color: "oklch(0.65 0.18 40)" }}
+            style={{ color: "oklch(0.62 0.18 80)" }}
             className="flex-shrink-0"
           />
-          <p className="text-xs" style={{ color: "oklch(0.55 0.15 40)" }}>
+          <p className="text-xs" style={{ color: "oklch(0.52 0.15 80)" }}>
             Please use Freecharge or Mobikwik wallet for payment!
           </p>
         </div>
@@ -1967,7 +1967,6 @@ function PaymentTab({
   processingOrders,
   isAdmin,
   phone,
-  totalDeposit,
 }: {
   sellOn: boolean;
   setSellOn: (v: boolean) => void;
@@ -1977,7 +1976,6 @@ function PaymentTab({
   processingOrders: ProcessingOrder[];
   isAdmin: boolean;
   phone: string;
-  totalDeposit: number;
 }) {
   const [upiSending, setUpiSending] = useState<Set<string>>(() => {
     try {
@@ -1987,18 +1985,16 @@ function PaymentTab({
       return new Set();
     }
   });
-  const [sellMessage, setSellMessage] = useState<
-    "success" | "low" | "no_deposit" | null
-  >(null);
+  const [sellMessage, setSellMessage] = useState<"success" | "low" | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const handleToggle = (checked: boolean) => {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
       if (checked) {
-        if (totalDeposit <= 0) {
-          setSellMessage("no_deposit");
-        } else if (balance >= 200) {
+        if (balance >= 200) {
           setSellOn(true);
           setSellMessage("success");
         } else {
@@ -2198,32 +2194,6 @@ function PaymentTab({
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Add funds to your balance to start selling.
-                  </p>
-                </div>
-              </motion.div>
-            )}
-            {sellMessage === "no_deposit" && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="w-full flex items-center gap-3 p-4 rounded-xl"
-                style={{
-                  background: "rgba(239,68,68,0.06)",
-                  border: "1px solid rgba(239,68,68,0.2)",
-                }}
-              >
-                <AlertTriangle
-                  size={20}
-                  className="text-zpay-red flex-shrink-0"
-                />
-                <div>
-                  <p className="text-sm font-bold text-zpay-red">
-                    Deposit required to withdraw
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    You must complete a deposit order before you can withdraw
-                    funds.
                   </p>
                 </div>
               </motion.div>
@@ -2591,10 +2561,10 @@ function AdminTab({ onLogout }: { onLogout: () => void }) {
     () => localStorage.getItem("zpay_admin_upi") || "pubgopop@freecharge",
   );
   const [cashbackSetting, setCashbackSetting] = useState(
-    () => localStorage.getItem("zpay_admin_cashback") || "8",
+    () => localStorage.getItem("zpay_admin_cashback") || "9.8",
   );
   const [bonusSetting, setBonusSetting] = useState(
-    () => localStorage.getItem("zpay_admin_bonus") || "600",
+    () => localStorage.getItem("zpay_admin_bonus") || "180",
   );
   const [tickersSetting, setTickersSetting] = useState(() => {
     const stored = localStorage.getItem("zpay_admin_tickers");
@@ -2683,7 +2653,7 @@ function AdminTab({ onLogout }: { onLogout: () => void }) {
     setTimeout(() => setSettingsSaved(false), 2000);
   };
 
-  const goldBorder = { border: "1px solid oklch(0.65 0.18 40 / 0.3)" };
+  const goldBorder = { border: "1px solid oklch(0.62 0.18 80 / 0.3)" };
   const cardStyle = {
     background: "rgba(255,255,255,0.9)",
     ...goldBorder,
@@ -2697,11 +2667,11 @@ function AdminTab({ onLogout }: { onLogout: () => void }) {
         className="px-4 pt-10 pb-4 flex items-center gap-3"
         style={{
           background:
-            "linear-gradient(135deg, oklch(0.65 0.18 40 / 0.08), transparent)",
-          borderBottom: "1px solid oklch(0.65 0.18 40 / 0.15)",
+            "linear-gradient(135deg, oklch(0.62 0.18 80 / 0.08), transparent)",
+          borderBottom: "1px solid oklch(0.62 0.18 80 / 0.15)",
         }}
       >
-        <Shield size={22} style={{ color: "oklch(0.65 0.18 40)" }} />
+        <Shield size={22} style={{ color: "oklch(0.62 0.18 80)" }} />
         <h1 className="text-xl font-bold text-foreground">Admin Panel</h1>
       </div>
 
@@ -2709,7 +2679,7 @@ function AdminTab({ onLogout }: { onLogout: () => void }) {
       <div className="mx-4 mt-4">
         <p
           className="text-xs uppercase tracking-wider font-bold mb-3"
-          style={{ color: "oklch(0.65 0.18 40)" }}
+          style={{ color: "oklch(0.62 0.18 80)" }}
         >
           User Management
         </p>
@@ -2742,7 +2712,7 @@ function AdminTab({ onLogout }: { onLogout: () => void }) {
                   <div className="text-right">
                     <p
                       className="text-sm font-bold"
-                      style={{ color: "oklch(0.65 0.18 40)" }}
+                      style={{ color: "oklch(0.62 0.18 80)" }}
                     >
                       ₹{u.balance.toLocaleString("en-IN")}
                     </p>
@@ -2764,7 +2734,7 @@ function AdminTab({ onLogout }: { onLogout: () => void }) {
                       type="button"
                       onClick={() => handleSaveBalance(u.phone)}
                       className="px-3 py-2 rounded-lg text-xs font-bold text-white"
-                      style={{ background: "oklch(0.65 0.18 40)" }}
+                      style={{ background: "oklch(0.62 0.18 80)" }}
                       data-ocid="admin.save_button"
                     >
                       Save
@@ -2788,8 +2758,8 @@ function AdminTab({ onLogout }: { onLogout: () => void }) {
                       }}
                       className="flex-1 py-1.5 rounded-lg text-xs font-semibold border"
                       style={{
-                        borderColor: "oklch(0.65 0.18 40 / 0.4)",
-                        color: "oklch(0.65 0.18 40)",
+                        borderColor: "oklch(0.62 0.18 80 / 0.4)",
+                        color: "oklch(0.62 0.18 80)",
                       }}
                       data-ocid="admin.edit_button"
                     >
@@ -2815,7 +2785,7 @@ function AdminTab({ onLogout }: { onLogout: () => void }) {
       <div className="mx-4 mt-6">
         <p
           className="text-xs uppercase tracking-wider font-bold mb-3"
-          style={{ color: "oklch(0.65 0.18 40)" }}
+          style={{ color: "oklch(0.62 0.18 80)" }}
         >
           App Settings
         </p>
@@ -2832,7 +2802,7 @@ function AdminTab({ onLogout }: { onLogout: () => void }) {
               type="text"
               value={upiSetting}
               onChange={(e) => setUpiSetting(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg border border-border bg-secondary text-sm outline-none focus:border-orange-400 transition-colors"
+              className="w-full px-3 py-2.5 rounded-lg border border-border bg-secondary text-sm outline-none focus:border-yellow-400 transition-colors"
               data-ocid="admin.input"
             />
           </div>
@@ -2848,7 +2818,7 @@ function AdminTab({ onLogout }: { onLogout: () => void }) {
               type="number"
               value={cashbackSetting}
               onChange={(e) => setCashbackSetting(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg border border-border bg-secondary text-sm outline-none focus:border-orange-400 transition-colors"
+              className="w-full px-3 py-2.5 rounded-lg border border-border bg-secondary text-sm outline-none focus:border-yellow-400 transition-colors"
               data-ocid="admin.input"
             />
           </div>
@@ -2864,7 +2834,7 @@ function AdminTab({ onLogout }: { onLogout: () => void }) {
               type="number"
               value={bonusSetting}
               onChange={(e) => setBonusSetting(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg border border-border bg-secondary text-sm outline-none focus:border-orange-400 transition-colors"
+              className="w-full px-3 py-2.5 rounded-lg border border-border bg-secondary text-sm outline-none focus:border-yellow-400 transition-colors"
               data-ocid="admin.input"
             />
           </div>
@@ -2880,7 +2850,7 @@ function AdminTab({ onLogout }: { onLogout: () => void }) {
               value={tickersSetting}
               onChange={(e) => setTickersSetting(e.target.value)}
               rows={4}
-              className="w-full px-3 py-2.5 rounded-lg border border-border bg-secondary text-sm outline-none focus:border-orange-400 transition-colors font-mono resize-none"
+              className="w-full px-3 py-2.5 rounded-lg border border-border bg-secondary text-sm outline-none focus:border-yellow-400 transition-colors font-mono resize-none"
               data-ocid="admin.textarea"
             />
           </div>
@@ -2890,7 +2860,7 @@ function AdminTab({ onLogout }: { onLogout: () => void }) {
             className="w-full py-3 rounded-xl font-bold text-sm text-white transition-all active:scale-[0.98]"
             style={{
               background:
-                "linear-gradient(135deg, oklch(0.72 0.18 42), oklch(0.62 0.20 34))",
+                "linear-gradient(135deg, oklch(0.78 0.18 82), oklch(0.68 0.20 68))",
             }}
             data-ocid="admin.submit_button"
           >
@@ -2904,7 +2874,7 @@ function AdminTab({ onLogout }: { onLogout: () => void }) {
         <div className="flex items-center justify-between mb-3">
           <p
             className="text-xs uppercase tracking-wider font-bold"
-            style={{ color: "oklch(0.65 0.18 40)" }}
+            style={{ color: "oklch(0.62 0.18 80)" }}
           >
             Processing Orders
           </p>
@@ -2913,8 +2883,8 @@ function AdminTab({ onLogout }: { onLogout: () => void }) {
             onClick={loadProcessingOrders}
             className="text-xs px-3 py-1 rounded-lg border font-semibold"
             style={{
-              borderColor: "oklch(0.65 0.18 40 / 0.4)",
-              color: "oklch(0.65 0.18 40)",
+              borderColor: "oklch(0.62 0.18 80 / 0.4)",
+              color: "oklch(0.62 0.18 80)",
             }}
           >
             Refresh
@@ -2958,7 +2928,7 @@ function AdminTab({ onLogout }: { onLogout: () => void }) {
                     </div>
                     <p
                       className="text-sm font-bold"
-                      style={{ color: "oklch(0.65 0.18 40)" }}
+                      style={{ color: "oklch(0.62 0.18 80)" }}
                     >
                       ₹{order.amount} + ₹{order.income}
                     </p>
@@ -3336,7 +3306,6 @@ export default function App() {
             processingOrders={processingOrders}
             isAdmin={isAdmin}
             phone={isAuthenticated || ""}
-            totalDeposit={totalDeposit}
           />
         )}
         {activeTab === "tools" && (
@@ -3400,7 +3369,7 @@ export default function App() {
               />
               <path
                 d="M18 3 A15 15 0 0 1 33 18"
-                stroke="oklch(0.65 0.18 40)"
+                stroke="oklch(0.62 0.18 80)"
                 strokeWidth="3"
                 strokeLinecap="round"
               />
@@ -3457,7 +3426,7 @@ export default function App() {
                   <span
                     style={{
                       color: isActive
-                        ? "oklch(0.65 0.18 40)"
+                        ? "oklch(0.62 0.18 80)"
                         : "oklch(0.60 0.02 240)",
                     }}
                   >
@@ -3468,7 +3437,7 @@ export default function App() {
                       className="text-[10px] font-semibold"
                       style={{
                         color: isActive
-                          ? "oklch(0.65 0.18 40)"
+                          ? "oklch(0.62 0.18 80)"
                           : "oklch(0.60 0.02 240)",
                       }}
                     >

@@ -121,7 +121,7 @@ export default function LoginScreen({ onAuth }: LoginScreenProps) {
         style={{
           maxWidth: 430,
           background:
-            "radial-gradient(ellipse at 50% 0%, oklch(0.22 0.04 42 / 0.4) 0%, oklch(0.10 0.015 255) 60%)",
+            "radial-gradient(ellipse at 50% 0%, oklch(0.22 0.04 80 / 0.4) 0%, oklch(0.10 0.015 255) 60%)",
         }}
       >
         <div
@@ -155,7 +155,7 @@ export default function LoginScreen({ onAuth }: LoginScreenProps) {
           className="w-full relative z-10"
           style={{
             background: "oklch(0.16 0.025 255)",
-            border: "1px solid oklch(0.28 0.05 42 / 0.4)",
+            border: "1px solid oklch(0.28 0.05 80 / 0.4)",
             borderRadius: 20,
             boxShadow:
               "0 8px 40px oklch(0 0 0 / 0.5), 0 0 0 1px oklch(0.75 0.18 80 / 0.08)",
@@ -178,9 +178,9 @@ export default function LoginScreen({ onAuth }: LoginScreenProps) {
                 className="flex-1 py-3.5 text-sm font-bold transition-colors relative"
                 style={{
                   color:
-                    mode === m ? "oklch(0.72 0.18 42)" : "oklch(0.55 0.02 240)",
+                    mode === m ? "oklch(0.75 0.18 80)" : "oklch(0.55 0.02 240)",
                   background:
-                    mode === m ? "oklch(0.20 0.035 42 / 0.3)" : "transparent",
+                    mode === m ? "oklch(0.20 0.035 80 / 0.3)" : "transparent",
                 }}
                 data-ocid="auth.tab"
               >
@@ -189,7 +189,7 @@ export default function LoginScreen({ onAuth }: LoginScreenProps) {
                   <motion.div
                     layoutId="auth-tab-indicator"
                     className="absolute bottom-0 left-0 right-0 h-0.5"
-                    style={{ background: "oklch(0.72 0.18 42)" }}
+                    style={{ background: "oklch(0.75 0.18 80)" }}
                   />
                 )}
               </button>
@@ -325,7 +325,7 @@ export default function LoginScreen({ onAuth }: LoginScreenProps) {
                     className="w-full py-3.5 rounded-xl font-bold text-sm transition-all active:scale-[0.98]"
                     style={{
                       background:
-                        "linear-gradient(135deg, oklch(0.72 0.18 42), oklch(0.62 0.20 34))",
+                        "linear-gradient(135deg, oklch(0.78 0.18 82), oklch(0.68 0.20 68))",
                       color: "oklch(0.12 0.02 80)",
                       boxShadow: "0 4px 20px oklch(0.75 0.18 80 / 0.35)",
                     }}
@@ -343,7 +343,7 @@ export default function LoginScreen({ onAuth }: LoginScreenProps) {
                       type="button"
                       onClick={() => setMode("register")}
                       className="font-bold transition-colors"
-                      style={{ color: "oklch(0.72 0.18 42)" }}
+                      style={{ color: "oklch(0.75 0.18 80)" }}
                       data-ocid="auth.link"
                     >
                       Register
@@ -513,7 +513,7 @@ export default function LoginScreen({ onAuth }: LoginScreenProps) {
                     className="w-full py-3.5 rounded-xl font-bold text-sm transition-all active:scale-[0.98]"
                     style={{
                       background:
-                        "linear-gradient(135deg, oklch(0.72 0.18 42), oklch(0.62 0.20 34))",
+                        "linear-gradient(135deg, oklch(0.78 0.18 82), oklch(0.68 0.20 68))",
                       color: "oklch(0.12 0.02 80)",
                       boxShadow: "0 4px 20px oklch(0.75 0.18 80 / 0.35)",
                     }}
@@ -531,7 +531,7 @@ export default function LoginScreen({ onAuth }: LoginScreenProps) {
                       type="button"
                       onClick={() => setMode("login")}
                       className="font-bold transition-colors"
-                      style={{ color: "oklch(0.72 0.18 42)" }}
+                      style={{ color: "oklch(0.75 0.18 80)" }}
                       data-ocid="auth.link"
                     >
                       Login
